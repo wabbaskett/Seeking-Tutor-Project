@@ -7,6 +7,7 @@
 #include <sys/queue.h>
 #include <semaphore.h>
 #include <stdbool.h>
+#include <limits.h>
 
 int numStudents = 0;		//variables to store command line args
 int numTutors = 0;
@@ -290,11 +291,27 @@ main(int argc, char *argv[])
 	}
 	
 	numStudents = atoi(argv[1]);
+	if (numStudents <= 0 || numStudents > INT_MAX){
+		fprintf(stderr, "Error: invalid numStudents parameter, expected positive integer\n");	
+		exit(-1);
+	}
 	numTutors = atoi(argv[2]);
+	if (numTutors <= 0 || numTutors > INT_MAX){
+		fprintf(stderr, "Error: invalid numTutors parameter, expected positive integer\n");	
+		exit(-1);
+	}
 	numChairs = atoi(argv[3]);
+	if (numChairs <= 0 || numChairs > INT_MAX){
+		fprintf(stderr, "Error: invalid numChairs parameter, expected positive integer\n");	
+		exit(-1);
+	}
 	numHelp = atoi(argv[4]);
+	if (numHelp <= 0 || numHelp > INT_MAX){
+		fprintf(stderr, "Error: invalid numHelp parameter, expected positive integer\n");	
+		exit(-1);
+	}
 
-	sem_init(&mut_chair,0,1);																							//initialize locks for global variables
+	sem_init(&mut_chair,0,1);		//initialize locks for global variables
 	sem_init(&mut_current,0,1);
 	sem_init(&mut_total,0,1);
 	sem_init(&mut_complete,0,1);
@@ -306,10 +323,10 @@ main(int argc, char *argv[])
 	sem_init(&mut_wQ,0,1);
 	sem_init(&mut_tQ,0,1);
 
-	sem_init(&sem_coordinator_s,0,0);																					//initialize semaphore to signal co-ordinator
+	sem_init(&sem_coordinator_s,0,0);	//initialize semaphore to signal co-ordinator
 	sem_init(&sem_coordinator_t,0,0);
 
-	freeChairs = numChairs;																								//set freeChairs to maximum number of chairs (all chairs are empty at start)
+	freeChairs = numChairs;			//set freeChairs to maximum number of chairs (all chairs are empty at start)
 	pthread_t thread_coordinator;
 
 	STAILQ_INIT(&waiting_queue_head);
