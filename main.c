@@ -82,15 +82,20 @@ struct FIFO_QUEUE *priority_queue_heads;
 
 void *student_thread(void *arg)					//function for student threads takes student id (int) as a parameter
 {
-	int id = *((int *)arg); 
+	struct Student *self = arg;
+	int id = self->id; 
 	while(1)
-	{											
+	{	
+		//printf("student %d online \n", id);
 		sem_wait(&mut_wQ);																		//acquire chair and waiting queue locks
+
+		//printf("student %d got queue mut\n", id);
 		sem_wait(&mut_chair);								
+		//printf("student %d got chair mut\n", id);
 		if(freeChairs <= 0)
 		{
-			sem_post(&mut_wQ);																	//release locks
 			sem_post(&mut_chair);																
+			sem_post(&mut_wQ);																	//release locks
 			printf("Student %d found no empty chair. Will come again later\n",id);
 			sleep(1);
 			continue;
@@ -160,6 +165,7 @@ void *coordinator_thread()
 		first_student = STAILQ_FIRST(&waiting_queue_head);
 		STAILQ_REMOVE_HEAD(&waiting_queue_head, queueNode);
 
+		//printf("Coord popped student %d\n", first_student->id);
 		sem_post(&mut_wQ);
 		
 		int priority = first_student->times_helped;
@@ -205,7 +211,8 @@ void *coordinator_thread()
 
 void *tutor_thread(void *arg)					//function for tutor threads takes tutor id (int) as a parameter
 {
-	int id = *((int *)arg); 
+	struct Tutor *self = arg;
+	int id = self->id; 
 	int i = 0; //used for PQ loop index
 	struct Student *to_tutor = NULL;
 	sem_post(&tutor_array[id].busy_mutex);
@@ -263,8 +270,8 @@ void *tutor_thread(void *arg)					//function for tutor threads takes tutor id (i
 
 		printf("Student %d tutored by tutor %d. Total sessions being tutored = %d. Total sessions being tutored by all = %d\n",to_tutor->id,id,currentStudents,totalSessions);	//output
 
-		sem_post(&mut_current);														//release locks
 		sem_post(&mut_total);
+		sem_post(&mut_current);														//release locks
 
 		sem_wait(&mut_complete);
 		if(threadsComplete == numStudents)
@@ -340,7 +347,7 @@ main(int argc, char *argv[])
 		student_array[i].times_helped = 0;																			//initialize help required
 		student_array[i].tutor_mark = 0;																				//initialize tutor mark
 		sem_init(&(student_array[i].sem_student),0,0);																	//initialize semaphore to signal this student
-		pthread_create(&(student_array[i].thread_student), NULL, *student_thread, (void *)&(student_array[i].id));		//create a new thread for this student
+		pthread_create(&(student_array[i].thread_student), NULL, *student_thread, &student_array[i]);		//create a new thread for this student
 
 	}
 	for(i = 0; i < numTutors; i++)																						//build the tutor array
@@ -349,11 +356,11 @@ main(int argc, char *argv[])
 		tutor_array[i].busy = false;//Initialize availability
 		sem_init(&(tutor_array[i].busy_mutex),0,0);		//initialize mutex for this tutor's busy flag 
 		sem_init(&(tutor_array[i].sem_tutor),0,0);		//initialize semaphore to signal this tutor
-		pthread_create(&(tutor_array[i].thread_tutor), NULL, *tutor_thread, (void *)&(tutor_array[i].id));				//create a new thread for this tutor
+		pthread_create(&(tutor_array[i].thread_tutor), NULL, *tutor_thread, &tutor_array[i]);				//create a new thread for this tutor
 	}
-	pthread_create(&thread_coordinator, NULL, *coordinator_thread, (void *)&(tutor_array[i].id));
 
-	//Initializing the student threads
+	pthread_create(&thread_coordinator, NULL, *coordinator_thread, NULL);
+
 	
 	for(i = 0; i < numStudents; i++){																				//wait for student threads to exit
 		pthread_join(student_array[i].thread_student,NULL);
